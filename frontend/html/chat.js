@@ -5,7 +5,7 @@ const form       = document.getElementById("chat-form");
 const input      = document.getElementById("question-input");
 const btn        = form.querySelector("button");
 
-marked.setOptions({ breaks: true });
+marked.use({ gfm: true, breaks: true });
 
 function appendMessage(text, role, isMarkdown = false) {
   const div = document.createElement("div");

@@ -53,13 +53,23 @@ async def get_page_data(browser: Browser, url: str) -> tuple[str, list[str], lis
     page = await browser.new_page()
     try:
         await page.goto(url, wait_until="networkidle", timeout=30_000)
-        text = await page.inner_text("body")
+        # Extract links and images BEFORE stripping nav (nav contains links to other pages)
         hrefs = await page.eval_on_selector_all(
             "a[href]", "els => els.map(e => e.getAttribute('href'))"
         )
         srcs = await page.eval_on_selector_all(
             "img[src]", "els => els.map(e => e.src)"
         )
+        # Strip nav/header/footer so their repeated text doesn't pollute chunks
+        await page.evaluate("""
+            () => {
+                const selectors = ['nav', 'header', 'footer', '.nav', '.menu',
+                                   '.header', '.footer', '.navbar', '.site-header',
+                                   '.site-footer', '.breadcrumb'];
+                selectors.forEach(s => document.querySelectorAll(s).forEach(el => el.remove()));
+            }
+        """)
+        text = await page.inner_text("body")
     finally:
         await page.close()
 

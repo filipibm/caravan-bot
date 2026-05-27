@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     qdrant_collection: str = "rag_docs"
     embed_model: str = "text-embedding-3-small"
     chat_model: str = "claude-sonnet-4-6"
-    top_k: int = 5
+    top_k: int = 10
     min_score: float = 0.30
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
