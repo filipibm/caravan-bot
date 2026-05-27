@@ -32,13 +32,13 @@ def ensure_collection() -> None:
         )
 
 
-def upsert(chunks: list[str], vectors: list[list[float]], source_url: str) -> None:
+def upsert(chunks: list[str], vectors: list[list[float]], source_url: str, images: list[str] | None = None) -> None:
     ensure_collection()
     points = [
         PointStruct(
             id=str(uuid.uuid4()),
             vector=vec,
-            payload={"text": text, "source": source_url},
+            payload={"text": text, "source": source_url, "images": images or []},
         )
         for text, vec in zip(chunks, vectors)
     ]

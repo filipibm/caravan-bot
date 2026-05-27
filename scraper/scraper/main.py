@@ -41,8 +41,15 @@ def normalize(base: str, href: str) -> str | None:
     return url
 
 
-async def get_page_data(browser: Browser, url: str) -> tuple[str, list[str]]:
-    """Return (body text, list of absolute hrefs) for a single page."""
+IMAGE_URL_PATTERNS = ("/upload/Big/", "/upload/Medium/")
+
+
+def is_product_image(src: str) -> bool:
+    return any(p in src for p in IMAGE_URL_PATTERNS)
+
+
+async def get_page_data(browser: Browser, url: str) -> tuple[str, list[str], list[str]]:
+    """Return (body text, hrefs, absolute image URLs) for a single page."""
     page = await browser.new_page()
     try:
         await page.goto(url, wait_until="networkidle", timeout=30_000)
@@ -50,9 +57,14 @@ async def get_page_data(browser: Browser, url: str) -> tuple[str, list[str]]:
         hrefs = await page.eval_on_selector_all(
             "a[href]", "els => els.map(e => e.getAttribute('href'))"
         )
+        srcs = await page.eval_on_selector_all(
+            "img[src]", "els => els.map(e => e.src)"
+        )
     finally:
         await page.close()
-    return text, hrefs
+
+    images = list(dict.fromkeys(s for s in srcs if is_product_image(s)))
+    return text, hrefs, images
 
 
 async def crawl(seed_urls: list[str]) -> None:
@@ -70,7 +82,7 @@ async def crawl(seed_urls: list[str]) -> None:
 
             print(f"[{len(visited)}] Scraping {url}")
             try:
-                text, hrefs = await get_page_data(browser, url)
+                text, hrefs, images = await get_page_data(browser, url)
             except Exception as exc:
                 print(f"  SKIP — {exc}")
                 continue
@@ -86,13 +98,15 @@ async def crawl(seed_urls: list[str]) -> None:
             if not chunks:
                 continue
 
+            if images:
+                print(f"  {len(images)} images found")
             print(f"  {len(chunks)} chunks — embedding…")
             vectors: list[list[float]] = []
             for i in range(0, len(chunks), BATCH_SIZE):
                 batch = chunks[i : i + BATCH_SIZE]
                 vectors.extend(embed_batch(batch))
 
-            upsert(chunks, vectors, source_url=url)
+            upsert(chunks, vectors, source_url=url, images=images)
             print(f"  stored {len(chunks)} points")
 
         await browser.close()

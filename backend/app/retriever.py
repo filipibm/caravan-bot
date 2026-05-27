@@ -14,8 +14,8 @@ def get_client() -> AsyncQdrantClient:
     return _client
 
 
-async def retrieve(query: str) -> tuple[list[str], float]:
-    """Return (chunks, top_score). chunks is empty if top_score < min_score."""
+async def retrieve(query: str) -> tuple[list[str], list[str], float]:
+    """Return (chunks, images, top_score). chunks is empty if top_score < min_score."""
     vector = await embed(query)
     results: list[ScoredPoint] = await get_client().search(
         collection_name=settings.qdrant_collection,
@@ -24,5 +24,15 @@ async def retrieve(query: str) -> tuple[list[str], float]:
         with_payload=True,
     )
     if not results or results[0].score < settings.min_score:
-        return [], results[0].score if results else 0.0
-    return [hit.payload.get("text", "") for hit in results if hit.payload], results[0].score
+        return [], [], results[0].score if results else 0.0
+
+    chunks = [hit.payload.get("text", "") for hit in results if hit.payload]
+    all_images = list(dict.fromkeys(
+        img
+        for hit in results if hit.payload
+        for img in hit.payload.get("images", [])
+    ))
+    # Prefer Big uploads; cap at 6
+    big = [i for i in all_images if "/upload/Big/" in i]
+    images = (big or all_images)[:6]
+    return chunks, images, results[0].score

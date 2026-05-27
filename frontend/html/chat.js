@@ -41,6 +41,19 @@ form.addEventListener("submit", async (e) => {
 
     const data = await res.json();
     thinking.innerHTML = marked.parse(data.answer);
+
+    if (data.images && data.images.length > 0) {
+      const gallery = document.createElement("div");
+      gallery.className = "img-gallery";
+      data.images.forEach(src => {
+        const img = document.createElement("img");
+        img.src = src;
+        img.alt = "";
+        img.loading = "lazy";
+        gallery.appendChild(img);
+      });
+      thinking.appendChild(gallery);
+    }
   } catch (err) {
     thinking.className = "msg error";
     thinking.textContent = `Error: ${err.message}`;

@@ -64,6 +64,26 @@ button {
 
 button:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Image gallery inside bot bubbles */
+.img-gallery {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-top: 10px;
+  padding-bottom: 4px;
+}
+
+.img-gallery img {
+  height: 120px;
+  width: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.img-gallery img:hover { opacity: 0.85; }
+
 /* Markdown inside bot bubbles */
 .msg.bot p          { margin: 0 0 8px; }
 .msg.bot p:last-child { margin-bottom: 0; }

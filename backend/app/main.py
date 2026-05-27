@@ -26,6 +26,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    images: list[str]
     sources: list[str]
 
 
@@ -36,8 +37,8 @@ async def healthz() -> dict:
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
-    chunks, top_score = await retrieve(req.question)
+    chunks, images, top_score = await retrieve(req.question)
     if not chunks:
-        return ChatResponse(answer=OUT_OF_SCOPE, sources=[])
+        return ChatResponse(answer=OUT_OF_SCOPE, images=[], sources=[])
     reply = answer(req.question, chunks)
-    return ChatResponse(answer=reply, sources=chunks)
+    return ChatResponse(answer=reply, images=images, sources=chunks)
