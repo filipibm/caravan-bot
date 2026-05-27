@@ -1,0 +1,62 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.9.2
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c 'echo > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      TRANSFORMERS_CACHE: /model-cache
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - model_cache:/model-cache
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend/html:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - default
+      - odoo-proxy
+
+  scraper:
+    build: ./scraper
+    env_file: .env
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      TRANSFORMERS_CACHE: /model-cache
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    profiles:
+      - scrape
+    volumes:
+      - ./scraper:/app
+      - model_cache:/model-cache
+
+networks:
+  default: {}
+  odoo-proxy:
+    external: true
+    name: odoo19_bi-network
+
+volumes:
+  qdrant_data:
+  model_cache:
